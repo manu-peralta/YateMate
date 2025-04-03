@@ -1,0 +1,81 @@
+@page "/listarAmarras/{UserId}"
+@using YateMate.Aplicacion.UseCases.Amarras
+@using YateMate.Components.Account.Shared
+@rendermode InteractiveServer
+@inject ListarAmarraUseCase Listar
+@inject EliminarAmarraUseCase EliminarAmarraUseCase
+@inject NavigationManager NavigationManager
+<DialogoConfirmacion @ref="_dialogo" OnConfirmado="EliminarAmarra" />
+
+<h1>Listado de Amarras</h1>
+<title>Listado de Amarras</title>
+
+<MudContainer>
+    @if (!_amarras.Any())
+    {
+    <MudText Typo="Typo.h5">No hay Amarras cargadas</MudText>
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               Size="Size.Large">
+        <MudLink href="@{"/AgregarAmarra/"+UserId}" Color="Color.Tertiary" > Agregar Amarra</MudLink>
+    </MudButton>
+    }
+    else
+    {
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Large">
+            <MudLink href="@{"/AgregarAmarra/"+UserId}" Color="Color.Tertiary" > Agregar Amarra</MudLink>
+        </MudButton>
+    <MudTable Items="@_amarras" Class="mt-4" Dense="true" Outlined="true">
+        <HeaderContent>
+            <MudTh>Tamaño (Eslora x Manga x Calado) </MudTh>
+            <MudTh>Precio</MudTh>
+            <MudTh>Ubicacion</MudTh>
+            <MudTh>Acciones</MudTh>
+
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Tamanio.ToString().Replace("Pies", "'").Replace("De","") </MudTd>
+            <MudTd>@context.Precio</MudTd>
+            <MudTd>@context.Ubicacion</MudTd>
+            <MudTd>
+                <div class="button-container">
+                    @*
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => ListarEmbarcaciones(context.Id))">Modificar Amarra</MudButton>
+                *@
+                </div>
+                <div class="button-container">
+                    <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="@(() => ConfirmarEliminacion(context))">Quitar Amarra</MudButton>
+                </div>
+            </MudTd>
+
+        </RowTemplate>
+    </MudTable>
+    }
+</MudContainer>
+@code
+{
+    DialogoConfirmacion _dialogo = null!;
+    Amarra amarraEliminar=new Amarra();
+    
+    [Parameter] public string UserId  { get; set; }= null!;
+    private List<Amarra> _amarras { get; set; } = null!;
+    void ConfirmarEliminacion(Amarra amarra)
+    {
+        amarraEliminar = amarra;
+        _dialogo.Mensaje = $"Deseas Quitarle a la amarra en la ubicacion {amarra.Ubicacion} al usuario ?";
+        _dialogo.Mostrar();
+    }
+
+    void EliminarAmarra()
+    {
+        EliminarAmarraUseCase.Ejecutar(amarraEliminar.Id);
+        NavigationManager.NavigateTo("/listarAmarras/" + UserId, true);
+    }
+
+    protected override void OnInitialized()
+    {
+        _amarras = Listar.Ejecutar(UserId);
+    }
+}

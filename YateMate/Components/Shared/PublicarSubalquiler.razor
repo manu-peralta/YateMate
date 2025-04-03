@@ -1,0 +1,113 @@
+@rendermode InteractiveServer
+@using YateMate.Aplicacion.UseCases.Subalquiler
+@using System.ComponentModel.DataAnnotations
+@using YateMate.Components.Account.Pages
+
+@inject AgregarSubalquilerUseCase AgregarSubalquilerUseCase
+@inject ObtenerSubalquileresDeLaAmarraUseCase ObtenerSubalquileresDeLaAmarraUseCase 
+@inject NavigationManager Navegador
+@inject ObtenerFechasReservadasUseCase ObtenerFechasReservadasUseCase
+
+<MudDialog Style="max-width: 660px;">
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="display: flex; justify-content: center; width: 100%;">
+            Publicar subalquiler
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm OnSubmit="HandleSubmit" EditContext="editContext" FormName="PublicarSubalquiler">
+            <CustomValidator @ref="customValidator"></CustomValidator>
+
+            <MudDateRangePicker T="DateTime?"
+                                @bind-DateRange="dateModel.FechaRango"
+                                PickerVariant="PickerVariant.Static"
+                                MinDate="DateTime.Today"
+                                IsDateDisabledFunc="IsDateDisabled"
+                                />
+            <ValidationMessage For="@(() => dateModel.FechaRango)"/>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleSubmit">Confirmar</MudButton>
+        <MudButton OnClick="Cancel" Style="margin-left: auto">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+    [Parameter] public string IdDuenio { get; set; }
+    [Parameter] public int IdAmarra { get; set; }
+    
+    private EditContext? editContext;
+    public CustomValidator customValidator;
+    private Model dateModel = new();
+    private List<(DateTime Start, DateTime End)> fechasOcupadas = new ();
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(dateModel);
+        fechasOcupadas = ObtenerFechasReservadasUseCase.Ejecutar(IdAmarra);
+    }
+
+
+    private bool IsDateDisabled(DateTime date)
+    {
+        foreach (var fecha in fechasOcupadas)
+        {
+            if (date >= fecha.Start && date <= fecha.End)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void ValidSubmit()
+    {
+        var subalquiler = new Subalquiler(dateModel.FechaRango.Start.Value, dateModel.FechaRango.End.Value, IdDuenio, IdAmarra);
+        AgregarSubalquilerUseCase.Ejecutar(subalquiler);
+        MudDialog!.Close(DialogResult.Ok(true));
+        Navegador.NavigateTo("/ListadoMisSubalquileres");
+    }
+
+    void Cancel() => MudDialog!.Cancel();
+
+    public void HandleSubmit()
+    {
+        customValidator.ClearErrors();
+        var errors = new Dictionary<string, List<string>>();
+        if (dateModel.FechaRango != null)
+        {
+            
+            if (IsDateDisabled(dateModel.FechaRango.Start!.Value) || IsDateDisabled(dateModel.FechaRango.End!.Value))
+            {
+                errors.Add("FechaRango", new List<string> {
+                    $"El periodo seleccionado ya fue publicado por otro de tus subalquiler, por favor ingrese otro."
+                });
+                customValidator.DisplayErrors(errors);
+                return;
+            }
+        }
+        else
+        {
+            errors.Add("FechaRango", new List<string>
+            {
+                "Por favor ingrese un rango de fechas para su reserva."
+            });
+        }
+        if (errors.Count > 0)
+        {
+            customValidator.DisplayErrors(errors);
+            return;
+        }
+        ValidSubmit();
+    }
+
+
+    public class Model
+    {
+        [Required(ErrorMessage = "Obligatorio.")]
+        public DateRange? FechaRango { get; set; }
+    }
+    
+}

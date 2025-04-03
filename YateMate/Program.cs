@@ -8,6 +8,7 @@ using YateMate.Aplicacion.Entidades;
 using YateMate.Aplicacion.Interfaces;
 using YateMate.Aplicacion.UseCases;
 using MudBlazor.Services;
+using YateMate.Aplicacion.UseCases.Amarras;
 using YateMate.Aplicacion.UseCases.Bien;
 using YateMate.Aplicacion.UseCases.ApplicationUser;
 using YateMate.Aplicacion.UseCases.Embarcaciones;
@@ -16,6 +17,7 @@ using YateMate.Aplicacion.UseCases.Mensaje;
 using YateMate.Aplicacion.UseCases.Publicaciones;
 using YateMate.Aplicacion.UseCases.Reserva;
 using YateMate.Aplicacion.UseCases.Subalquiler;
+using YateMate.Aplicacion.UseCases.TruequesConfirmados;
 using YateMate.Components.Pages;
 using YateMate.Hubs;
 
@@ -85,26 +87,50 @@ public class Program
         builder.Services.AddScoped<IRepositorioPublicacion, RepositorioPublicacion>();
 
         builder.Services.AddTransient<ObtenerSubalquileresUseCase>();
+        builder.Services.AddTransient<ObtenerSubalquilerUseCase>();
         builder.Services.AddTransient<ObtenerSubalquileresDeUseCase>();
-        builder.Services.AddTransient <ObtenerSubalquileresEntreUseCase>();
+        builder.Services.AddTransient<ObtenerSubalquileresEntreUseCase>();
         builder.Services.AddTransient<ObtenerSubalquileresVigentesUseCase>();
         builder.Services.AddTransient<ObtenerSubalquileresDeLaAmarraUseCase>();
         builder.Services.AddTransient<AgregarSubalquilerUseCase>();
         builder.Services.AddTransient<ModificarSubalquilerUseCase>();
         builder.Services.AddTransient<EliminarSubalquilerUseCase>();
+        builder.Services.AddTransient<ObtenerDuenioSubalquilerUseCase>();
+        builder.Services.AddTransient<ObtenerFechasReservadasUseCase>();
         builder.Services.AddScoped<IRepositorioSubalquiler, RepositorioSubalquiler>();
 
         builder.Services.AddTransient<HacerReservaUseCase>();
         builder.Services.AddTransient<CancelarReservaUseCase>();
         builder.Services.AddTransient<ModificarReservaUseCase>();
         builder.Services.AddTransient<ListarReservasDeUseCase>();
+        builder.Services.AddTransient<ObtenerReservaUseCase>();
+        builder.Services.AddTransient<ObtenerReservasVigentesUseCase>();
+
+        builder.Services.AddTransient<ObtenerDuenioReservaUseCase>();
+        builder.Services.AddTransient<ListarReservasDeSubalquilerUseCase>();
+        builder.Services.AddTransient<ObtenerFechasOcupadasUseCase>();
+        builder.Services.AddTransient<ObtenerReservasDeSubalquilerUseCase>();
         builder.Services.AddScoped<IRepositorioReserva, RepositorioReserva>();
 
         builder.Services.AddTransient<AgregarMensajeUseCase>();
         builder.Services.AddTransient<ObtenerMensajesEntreUseCase>();
         builder.Services.AddScoped<IRepositorioMensaje, RepositorioMensaje>();
+        
+        builder.Services.AddTransient<ModificarAmarraUseCase>();
+        builder.Services.AddTransient<EliminarAmarraUseCase>();
+        builder.Services.AddTransient<ListarAmarraUseCase>();
+        builder.Services.AddTransient<FiltrarPorFechaUseCase>();
+        builder.Services.AddTransient<FiltrarPorTamanioUseCase>();
+        builder.Services.AddTransient<ObtenerAmarraUseCase>();
+        builder.Services.AddTransient<ListarAmarrasVaciasUseCase>();
+        builder.Services.AddTransient<AgregarAmarraUseCase>();
+        builder.Services.AddScoped<IRepositorioAmarra, RepositorioAmarra>();
 
-            
+        builder.Services.AddTransient<AgregarTruequeConfirmadoUseCase>();
+        builder.Services.AddTransient<ObtenerTruequesConfirmadosUseCase>();
+        builder.Services.AddTransient <ObtenerTruequesConfirmadosDeLaPublicacionUseCase>();
+        builder.Services.AddScoped<IRepositorioTruequeConfirmado, RepositorioTruequeConfirmado>();    
+        
         builder.Services.AddCascadingAuthenticationState();
         builder.Services.AddScoped<IdentityUserAccessor>();
         builder.Services.AddScoped<IdentityRedirectManager>();

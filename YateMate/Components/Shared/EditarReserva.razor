@@ -1,0 +1,172 @@
+@using System.ComponentModel.DataAnnotations
+@using YateMate.Aplicacion.UseCases.Reserva
+@using YateMate.Aplicacion.UseCases.Subalquiler
+@using System.ComponentModel.DataAnnotations
+@using YateMate.Components.Account.Pages
+@using YateMate.Components.Account.Pages.Manage
+
+@inject NavigationManager Navegador
+@inject ModificarReservaUseCase ModificarReservaUseCase
+@inject ObtenerDuenioSubalquilerUseCase ObtenerDuenioSubalquilerUseCase
+@inject ObtenerDuenioReservaUseCase ObtenerDuenioReservaUseCase
+@inject ObtenerFechasOcupadasUseCase ObtenerFechasOcupadasUseCase
+@inject ListarReservasDeSubalquilerUseCase ListarReservasDeSubalquilerUseCase
+@inject EmailSender EmailSender
+
+@rendermode InteractiveServer
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="display: flex; justify-content: center; width: 100%;">
+            Editar reserva
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <EditForm OnSubmit="HandleSubmit" EditContext="editContext" FormName="EditarReserva">
+            <CustomValidator @ref="customValidator"></CustomValidator>
+            <div class="form-group">
+                <MudDateRangePicker T="DateTime?"
+                                    @bind-DateRange="Model.FechaRango"
+                                    PickerVariant="PickerVariant.Static"
+                                    MinDate="Subalquiler.FechaInicio"
+                                    MaxDate="Subalquiler.FechaFin"
+                                    IsDateDisabledFunc="IsDateDisabled"/>
+                <ValidationMessage For="@(() => Model.FechaRango)"/>
+            </div>
+            
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Style="margin-left: auto">Cerrar</MudButton>
+        <div style="flex-grow: 1;"></div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleSubmit">Confirmar cambio</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code{
+    [Parameter] public Reserva Reserva { get; set; }
+    [Parameter] public Subalquiler Subalquiler { get; set; }
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+    
+    [CascadingParameter]
+    private Task<AuthenticationState>? _AuthenticationState { get; set; }
+
+    private string? _userId; 
+    
+    bool _esNuevoReserva = true;
+    Subalquiler? _subalquiler;
+    string _err = "";
+    Reserva reservaQueVaABaseDeDatos;
+    
+    [SupplyParameterFromForm] private InputModel Model { get; set; } = new();
+    private EditContext? editContext;
+    public CustomValidator customValidator;
+    private List<(DateTime Start, DateTime End)> fechasOcupadas = new();
+    
+    
+    private bool IsDateDisabled(DateTime date)
+    {
+        foreach (var fecha in fechasOcupadas)
+        {
+            if (date >= fecha.Start && date <= fecha.End)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    async Task Submit()
+    {
+        var mailDuenio = ObtenerDuenioSubalquilerUseCase.Ejecutar(Subalquiler.IdDuenio).Email;
+        var duenioReserva = ObtenerDuenioReservaUseCase.Ejecutar(reservaQueVaABaseDeDatos.UsuarioId);
+        // await EmailSender.SendMessageCambioReserva(mailDuenio, reservaQueVaABaseDeDatos, duenioReserva,Subalquiler);
+        Navegador.Refresh(forceReload: true);
+        MudDialog!.Close(DialogResult.Ok(true));
+    }
+    
+    void Cancel() => MudDialog!.Cancel();
+    
+    
+    protected override async Task OnInitializedAsync()
+    {
+        Model ??= new InputModel();
+        Model.UsuarioId ??= Reserva.UsuarioId;
+        Model.SubalquilerId ??= Reserva.SubalquilerId;
+        editContext = new(Model);
+        fechasOcupadas = await ObtenerFechasOcupadasUseCase.Ejecutar(Subalquiler.Id);
+        fechasOcupadas.Remove((Reserva.FechaInicio, Reserva.FechaFin));
+        
+    }
+    
+    public void HandleSubmit()
+    {
+        customValidator.ClearErrors();
+        Model.UsuarioId = Reserva.UsuarioId;
+        var errors = new Dictionary<string, List<string>>();
+        if (Model.FechaRango != null)
+        {
+            reservaQueVaABaseDeDatos = new Reserva(Model.SubalquilerId.Value, Model.UsuarioId, Model.FechaRango.Start.Value, Model.FechaRango.End.Value);
+            reservaQueVaABaseDeDatos.Id = Reserva.Id;
+            // if (!CheckearDisponibilidad(reservaQueVaABaseDeDatos,Subalquiler))
+            if(IsDateDisabled(reservaQueVaABaseDeDatos.FechaInicio) || IsDateDisabled(reservaQueVaABaseDeDatos.FechaFin))
+            {
+                errors.Add("FechaRango", new List<string> {
+                    $"El periodo seleccionado contiene otras reservas, por favor ingrese otro."
+                });
+                customValidator.DisplayErrors(errors);
+                return;
+            }
+        }
+        else
+        {
+            errors.Add("FechaRango", new List<string>
+            {
+                "Por favor ingrese un rango de fechas para su reserva."
+            });
+        }
+        if (errors.Count > 0)
+        {
+            Console.WriteLine($"Hay {errors.Count} errores");
+            foreach (var error in errors)
+            {
+                Console.WriteLine($"Error {error.Key} {error.Value}");
+            }
+            customValidator.DisplayErrors(errors);
+            return;
+        }
+        ValidSubmit();
+    }
+    
+    public void ValidSubmit()
+    {
+        ModificarReservaUseCase.Ejecutar(reservaQueVaABaseDeDatos);
+        Submit();
+    }
+    
+    // private bool CheckearDisponibilidad(Reserva reserva, Subalquiler? subalquiler)
+    // {
+    //     if (subalquiler == null)
+    //     {
+    //         return false;
+    //     }
+    //     var reservasSubalquiler = ListarReservasDeSubalquilerUseCase.Ejecutar(subalquiler.Id);
+    //     if (reservasSubalquiler.Count == 0)
+    //     {
+    //         return true; // Está disponible si no hay reservas existentes
+    //     }
+    //     return !reservasSubalquiler.Any(r => (r.FechaInicio >= reserva.FechaInicio && r.FechaInicio <= reserva.FechaFin) 
+    //                                          || (r.FechaFin >= reserva.FechaInicio && r.FechaFin <= reserva.FechaFin));
+    // }
+    
+    
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Obligatorio.")]
+        public DateRange? FechaRango { get; set; }
+
+        public string? UsuarioId { get; set; } = null;
+        public int? SubalquilerId { get; set; } = null;
+    }
+
+}

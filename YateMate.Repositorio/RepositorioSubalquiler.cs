@@ -26,11 +26,26 @@ public class RepositorioSubalquiler : IRepositorioSubalquiler
         }
     }
 
-    public void EliminarSubalquiler(string idSubalquiler)
+    public void EliminarSubalquiler(int idSubalquiler)
     {
-        throw new NotImplementedException();
+        using (var context = ApplicationDbContext.CrearContexto())
+        {
+            var subalquilerAEliminar= context.Subalquileres.FirstOrDefault(s => s.Id== idSubalquiler);
+            if (subalquilerAEliminar != null)
+            {
+                subalquilerAEliminar.EstaEliminado = true;
+            }
+            context.SaveChanges();
+        }    
     }
 
+    public Subalquiler? ObtenerSubalquiler(int id)
+    {
+        using (var context = ApplicationDbContext.CrearContexto())
+        {
+            return context.Subalquileres.FirstOrDefault(s => s.Id == id);
+        }
+    }
     public List<Subalquiler> ObtenerSubalquileres()
     {
         using (var context = ApplicationDbContext.CrearContexto())
@@ -63,11 +78,32 @@ public class RepositorioSubalquiler : IRepositorioSubalquiler
         }
     }
 
-    public List<Subalquiler> ObtenerSubalquileresDeLaAmarra(string idAmarra)
+    public List<Subalquiler> ObtenerSubalquileresDeLaAmarra(int idAmarra)
     {
         using (var context = ApplicationDbContext.CrearContexto())
         {
             return context.Subalquileres.Where(subalquiler => subalquiler.IdAmarra==idAmarra).ToList();
+        }
+    }
+
+    public ApplicationUser? ObtenerDuenioSubalquiler(string id)
+    {
+        using (var context = ApplicationDbContext.CrearContexto())
+        {
+            return context.ApplicationUsers.FirstOrDefault(a => a.Id == id);
+        }
+    }
+
+    public List<(DateTime Start, DateTime End)> ObtenerFechasReservadas(int idAmarra)
+    {
+        using (var context = ApplicationDbContext.CrearContexto())
+        {
+            return context.Subalquileres
+                .Where(subalquiler => subalquiler.IdAmarra == idAmarra)
+                .Select(r => new { r.FechaInicio, r.FechaFin })
+                .AsEnumerable()
+                .Select(r => (r.FechaInicio, r.FechaFin))
+                .ToList();
         }
     }
 }

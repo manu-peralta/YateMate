@@ -1,0 +1,50 @@
+@page "/AgregarAmarra/{UserId}"
+@using YateMate.Aplicacion.UseCases.Amarras
+@rendermode InteractiveServer
+@inject ListarAmarrasVaciasUseCase Listar
+@inject AgregarAmarraUseCase AgregarAmarraUseCase
+@inject NavigationManager NavigationManager
+<h1>Agregar Amarra</h1>
+<title>Agregar Amarra</title>
+
+<MudContainer>
+    <MudTable Items="@_amarras" Class="mt-4" Dense="true" Outlined="true">
+        <HeaderContent>
+            <MudTh>Tamaño (Eslora x Manga x Calado) </MudTh>
+            <MudTh>Precio</MudTh>
+            <MudTh>Ubicacion</MudTh>
+            <MudTh>Acciones</MudTh>
+
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Tamanio.ToString().Replace("Pies", "'").Replace("De","") </MudTd>
+            <MudTd>@context.Precio</MudTd>
+            <MudTd>@context.Ubicacion</MudTd>
+            <MudTd>
+                <div class="button-container">
+                </div>
+                <div class="button-container">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="()=>HandleClick(context.Id)">
+                     Agregar Amarra
+                    </MudButton>
+                </div>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+@code
+{
+    
+    [Parameter] public string UserId  { get; set; }= null!;
+    private List<Amarra> _amarras { get; set; } = null!;
+
+    void HandleClick(int amarraId)
+    {
+        AgregarAmarraUseCase.Ejecutar(amarraId, UserId);
+        NavigationManager.NavigateTo("/listarAmarras/"+UserId, true);
+    }
+    protected override void OnInitialized()
+    {
+        _amarras = Listar.Ejecutar();
+    }
+}
